@@ -4,6 +4,7 @@ import com.back.domain.orders.entity.OrderStatus;
 import com.back.domain.orders.entity.Orders;
 import com.back.domain.orders.repository.OrderRepository;
 import com.back.domain.users.entity.Users;
+import com.back.domain.users.service.UserService;
 import jakarta.persistence.EntityManager;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final EntityManager entityManager;
+    private final UserService userService;
 
     // 주문 다건 조회
     public List<Orders> findAll() {
@@ -41,7 +42,8 @@ public class OrderService {
     public Orders create(int usersId, String address, String addressDetail, String postcode, int totalPrice) {
         LocalDate deliveryDate = calculateDeliveryDate();
 
-        Users userId = entityManager.getReference(Users.class, 1);
+        // User 번호 받아와서 등록
+        Users userId = userService.findById(usersId).get();
 
         Orders order = new Orders(userId, address, addressDetail, postcode, totalPrice, deliveryDate);
 
@@ -54,7 +56,7 @@ public class OrderService {
     }
 
     // 주문 수정
-    public void modify(Orders order, OrderStatus status, int totalPrice) {
-        order.modify(status, totalPrice);
+    public void modify(Orders order, OrderStatus status) {
+        order.modify(status);
     }
 }

@@ -60,8 +60,11 @@ public class Orders extends BaseEntity {
         this.deliveryDate = deliveryDate;
     }
 
-    public void modify(OrderStatus status, int totalPrice) {
+    public void modifyState(OrderStatus status) {
         this.status = status;
+    }
+
+    public void modifyTotalPrice(int totalPrice) {
         this.totalPrice = totalPrice;
     }
 }
