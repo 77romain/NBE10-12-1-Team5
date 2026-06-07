@@ -67,7 +67,7 @@ export default function MainPage() {
                 className="bg-white border border-gray-300 rounded-2xl aspect-square flex flex-col items-center justify-center p-4 hover:shadow-xl hover:border-transparent transition-all duration-200 group"
               >
                 <div className="w-50 h-50 rounded-xl mb-3 overflow-hidden">
-                  <Image src="/coffee_bean.jpg" alt={item.name} width={56} height={56} className="w-full h-full object-cover" />
+                  <Image src="https://i.imgur.com/HKOFQYa.jpeg" alt={item.name} width={56} height={56} className="w-full h-full object-cover" />
                 </div>
                 <p className="font-semibold text-sm text-center text-gray-800 leading-tight">
                   {item.name}
