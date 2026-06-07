@@ -41,4 +41,8 @@ public class Items extends BaseEntity {
         this.inventory = inventory;
     }
 
+    public void modifyInventory(int inventory) {
+        this.inventory = inventory;
+    }
+
 }

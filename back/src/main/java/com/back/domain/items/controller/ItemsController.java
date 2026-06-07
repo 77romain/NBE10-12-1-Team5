@@ -6,6 +6,7 @@ import com.back.domain.items.entity.Items;
 import com.back.domain.items.service.ItemsService;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/items")
 @RequiredArgsConstructor
+@Tag(name = "ItemsController", description = "API 상품 컨트롤러")
 public class ItemsController {
     private final ItemsService itemsService;
 
