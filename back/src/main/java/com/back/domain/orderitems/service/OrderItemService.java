@@ -41,9 +41,8 @@ public class OrderItemService {
                         + " (남은 재고: " + item.getInventory() + "개)");
             }
 
-            // items 엔티티에 재고만 수정하는 메서드 구현 필요
             int Inventory = item.getInventory() - request.getItemQuantity();
-            item.modify(item.getName(), item.getDescription(), item.getPrice(), Inventory);
+            item.modifyInventory(Inventory);
             
             OrderItems orderItem = OrderItems.builder()
                     .order(order)
@@ -117,11 +116,10 @@ public class OrderItemService {
     public void restoreInventory(int orderId) {
         List<OrderItems> orderItems = orderItemRepository.findByOrderId(orderId);
 
-        // items 엔티티에 재고만 수정하는 메서드 구현 필요
         for (OrderItems orderItem : orderItems) {
             Items item = orderItem.getItem();
             int restoredInventory = item.getInventory() + orderItem.getItemQuantity();
-            item.modify(item.getName(), item.getDescription(), item.getPrice(), restoredInventory);
+            item.modifyInventory(restoredInventory);
         }
     }
 
