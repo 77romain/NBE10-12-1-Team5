@@ -34,6 +34,12 @@ public class BaseInitData {
             @Transactional
             public void run(String @NonNull ... args)  {
 
+                if (itemsRepository.count() > 0 ||
+                        userRepository.count() > 0 ||
+                        orderRepository.count() > 0) {
+                    return;
+                }
+
                 Items item1 = itemsRepository.save(new Items(
                         "Ethiopia Yirgacheffe",
                         "플로럴, 시트러스 계열의 밝고 산뜻한 에티오피아 원두",

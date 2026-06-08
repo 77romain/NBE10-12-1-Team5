@@ -1,0 +1,16 @@
+name: fiveguys
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: fiveguys-db
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: GridsCircles
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
