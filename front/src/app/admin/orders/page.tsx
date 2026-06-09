@@ -93,23 +93,37 @@ export default function OrdersPage() {
   const ordersRef = useRef<OrderDto[]>([]);
   useEffect(() => { ordersRef.current = orders; }, [orders]);
 
+  const fetchAll = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const [orderList, userList]: [OrderDto[], UserDto[]] = await Promise.all([
+        apiFetch("/api/orders"),
+        apiFetch("/api/users"),
+      ]);
+      setOrders(orderList);
+      setUserMap(new Map(userList.map((u) => [u.id, u])));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
   // 데이터 로드
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [orderList, userList]: [OrderDto[], UserDto[]] = await Promise.all([
-          apiFetch("/api/orders"),
-          apiFetch("/api/users"),
-        ]);
-        setOrders(orderList);
-        setUserMap(new Map(userList.map((u) => [u.id, u])));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+    fetchAll(true);
+  }, []);
+
+  // 실시간 주문 동기화 이벤트 수신
+  useEffect(() => {
+    const handleRefresh = () => {
+      // 사용자 UX 흐름을 깨지 않기 위해 전체 화면 로딩바 없이 백그라운드에서 조용히 리프레시
+      fetchAll(false);
     };
-    fetchAll();
+    window.addEventListener("refresh-orders", handleRefresh);
+    return () => {
+      window.removeEventListener("refresh-orders", handleRefresh);
+    };
   }, []);
 
   // deliveryDate 14:00 이후 PENDING·PROCESSING → SHIPPED 자동 처리
@@ -312,6 +326,7 @@ const handleSingleCancel = async (orderId: number) => {
         method: "PUT",
         body: JSON.stringify(editItems.map((it) => ({ itemId: it.itemId, itemQuantity: it.itemQuantity }))),
       });
+      await fetchAll(false);
       closeEdit();
     } catch {
       alert("수정 중 오류가 발생했습니다.");
