@@ -2,6 +2,7 @@ package com.back.domain.user.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public record UserRequest(
         @NotBlank(message = "이메일을 입력해주세요.")
@@ -15,5 +16,6 @@ public record UserRequest(
         String addressDetail,
 
         @NotBlank(message = "우편번호를 입력해주세요.")
+        @Size(min = 5, max = 5, message = "우편번호는 5자리여야 합니다.")
         String postcode
 ) {}
