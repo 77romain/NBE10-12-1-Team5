@@ -10,7 +10,8 @@ public record OrderProductResponse(
         int productQuantity,
         String productName,
         int productPrice,
-        LocalDateTime createDate
+        LocalDateTime createDate,
+        LocalDateTime deleteDate
 ) {
     public OrderProductResponse(OrderProduct orderProduct) {
         this(
@@ -20,7 +21,8 @@ public record OrderProductResponse(
                 orderProduct.getProductQuantity(),
                 orderProduct.getProductName(),
                 orderProduct.getProductPrice(),
-                orderProduct.getCreateDate()
+                orderProduct.getCreateDate(),
+                orderProduct.getDeleteDate()
         );
     }
 }
