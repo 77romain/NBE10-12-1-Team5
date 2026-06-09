@@ -1,5 +1,8 @@
 package com.back.domain.orders.service;
 
+import com.back.domain.notification.dto.NotificationResponse;
+import com.back.domain.notification.dto.NotificationType;
+import com.back.domain.notification.repository.SseEmitterRepository;
 import com.back.domain.orderitems.dto.OrderItemRequest;
 import com.back.domain.orderitems.service.OrderItemService;
 import com.back.domain.orders.entity.OrderStatus;
@@ -25,6 +28,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserService userService;
     private final OrderItemService orderItemService;
+    private final SseEmitterRepository sseEmitterRepository;
 
     public long count() { return orderRepository.count(); }
 
@@ -69,6 +73,15 @@ public class OrderService {
         // 주문 저장
         Orders saveOrder = orderRepository.save(orders);
         orderItemService.saveOrderItems(saveOrder.getId(), orderItemReq);
+
+        NotificationResponse sseResponse = NotificationResponse.builder()
+                .type(NotificationType.CREATE_ORDER)
+                .message("새로운 주문이 접수되었습니다.")
+                .orderId(orders.getId())
+                .totalPrice(orders.getTotalPrice())
+                .build();
+
+        sseEmitterRepository.sendNotification(sseResponse);
 
         return saveOrder;
     }

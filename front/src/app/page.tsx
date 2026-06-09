@@ -216,7 +216,18 @@ export default function MainPage() {
         body: JSON.stringify(editItems.map((it) => ({ itemId: it.itemId, itemQuantity: it.itemQuantity }))),
       });
       const res: RsData<OrderItemDto[]> = await apiFetch(`/api/orders/${selectedOrder.id}/items`);
-      setOrderItems(res.data ?? []);
+      const updatedItems = res.data ?? [];
+      setOrderItems(updatedItems);
+
+      // 로컬 상태를 즉시 동기화하기 위해 새 총 가격 계산
+      const newTotalPrice = updatedItems.reduce((sum, it) => sum + it.itemPrice * it.itemQuantity, 0);
+
+      // 선택된 주문의 총금액 및 목록의 총금액 실시간 업데이트
+      setSelectedOrder((prev) => prev ? { ...prev, totalPrice: newTotalPrice } : null);
+      setMyOrders((prev) =>
+        prev ? prev.map((o) => o.id === selectedOrder.id ? { ...o, totalPrice: newTotalPrice } : o) : null
+      );
+
       setEditMode(false);
     } catch {
       alert("수정 중 오류가 발생했습니다.");
@@ -224,6 +235,12 @@ export default function MainPage() {
       setEditSaving(false);
     }
   };
+
+  // 수정 중인 품목들의 실시간 총 합계 금액 계산
+  const editTotal = editItems.reduce((sum, it) => {
+    const item = allItems.find((i) => i.id === it.itemId);
+    return sum + (item ? item.price : 0) * it.itemQuantity;
+  }, 0);
 
   return (
     <div className="min-h-screen flex">
@@ -365,6 +382,11 @@ export default function MainPage() {
                                           추가
                                         </button>
                                       </div>
+                                    </div>
+                                    {/* 실시간 변경 합계 금액 표시 */}
+                                    <div className="flex justify-between items-center text-xs font-semibold text-gray-700 py-1.5 border-t border-gray-100">
+                                      <span>실시간 합계</span>
+                                      <span>{editTotal.toLocaleString()}원</span>
                                     </div>
                                     <div className="flex gap-1">
                                       <button onClick={() => setEditMode(false)}

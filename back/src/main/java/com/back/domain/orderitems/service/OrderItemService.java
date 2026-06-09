@@ -9,6 +9,9 @@ import com.back.domain.orders.entity.OrderStatus;
 import com.back.domain.orders.repository.OrderRepository;
 import com.back.domain.items.entity.Items;
 import com.back.domain.items.repository.ItemsRepository;
+import com.back.domain.notification.dto.NotificationResponse;
+import com.back.domain.notification.dto.NotificationType;
+import com.back.domain.notification.repository.SseEmitterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ public class OrderItemService {
     private final OrderItemRepository orderItemRepository;
     private final ItemsRepository itemsRepository;
     private final OrderRepository orderRepository;
+    private final SseEmitterRepository sseEmitterRepository;
 
     // 주문 생성시 내부 주문품목들 까지 한번에 처리하는 메서드
     @Transactional
@@ -108,6 +112,15 @@ public class OrderItemService {
         deleteOrderItems(orderId);
         saveOrderItems(orderId, requests);
 
+        // 실시간 주문 변경(주문품목 수정) 알림 발송
+        NotificationResponse sseResponse = NotificationResponse.builder()
+                .type(NotificationType.UPDATE_ORDER)
+                .message("주문이 수정되었습니다.")
+                .orderId(order.getId())
+                .totalPrice(order.getTotalPrice())
+                .build();
+
+        sseEmitterRepository.sendNotification(sseResponse);
     }
 
 
