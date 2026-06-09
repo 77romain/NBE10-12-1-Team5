@@ -4,6 +4,7 @@ import com.back.domain.orderproduct.dto.OrderProductRequest;
 import com.back.domain.order.entity.OrderStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +20,7 @@ public class OrderRequest {
                 String addressDetail,
 
                 @NotBlank(message = "우편번호를 입력해주세요.")
+                @Size(min = 5, max = 5, message = "우편번호는 5자리여야 합니다.")
                 String postcode,
 
                 OrderStatus status,

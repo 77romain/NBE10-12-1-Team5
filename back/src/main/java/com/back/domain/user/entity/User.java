@@ -1,29 +1,25 @@
 package com.back.domain.user.entity;
 
+import com.back.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "users")
-public class User {
+public class User extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
+
+    @Column
+    private String pastEmail;
 
     @Column(nullable = false)
     private String address;
@@ -33,13 +29,6 @@ public class User {
 
     @Column(nullable = false)
     private String postcode;
-
-    @CreatedDate
-    @Column(updatable = false)
-    private LocalDateTime createDate;
-
-    @LastModifiedDate
-    private LocalDateTime modifyDate;
 
     @Builder
     public User(String email, String address, String addressDetail, String postcode) {
@@ -54,5 +43,11 @@ public class User {
         this.address = address;
         this.addressDetail = addressDetail;
         this.postcode = postcode;
+    }
+
+    public void delete() {
+        this.pastEmail = this.email;
+        this.email = null;
+        softDelete();
     }
 }
