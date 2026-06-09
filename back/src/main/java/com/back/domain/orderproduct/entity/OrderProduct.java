@@ -44,6 +44,8 @@ public class OrderProduct {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createDate;
 
+    private LocalDateTime deleteDate;
+
     @Builder
     public OrderProduct(Order order, Product product, int productQuantity, String productName, int productPrice) {
         this.order = order;
@@ -55,5 +57,9 @@ public class OrderProduct {
 
     public void updateQuantity(int productQuantity) {
         this.productQuantity = productQuantity;
+    }
+
+    public void softDelete() {
+        this.deleteDate = LocalDateTime.now();
     }
 }

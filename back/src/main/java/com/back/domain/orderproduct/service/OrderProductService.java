@@ -92,7 +92,11 @@ public class OrderProductService {
             restoreInventory(orderId);
         }
 
-        orderProductRepository.deleteByOrderId(orderId);
+        List<OrderProduct> orderProducts = orderProductRepository.findByOrderId(orderId);
+
+        for(OrderProduct orderProduct : orderProducts) {
+            orderProduct.softDelete();
+        }
     }
 
     // 주문의 주문품목들을 수정하는 메서드
