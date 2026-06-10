@@ -1,8 +1,10 @@
 package com.back.domain.product.service;
 
+import com.back.domain.order.entity.OrderStatus;
 import com.back.domain.product.dto.ProductRequest;
 import com.back.domain.product.entity.Product;
 import com.back.domain.product.repository.ProductRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,8 +59,16 @@ public class ProductService {
     }
 
     // 상품 삭제 - delete 전체 삭제가 아닌 product 하나를 삭제
-    public void delete(Product product) {
-        productRepository.delete(product);
+    public void delete(int id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다."));
+
+        // 2. PENDING 주문 존재하면 삭제 불가
+        if (productRepository.existsPendingOrderByProductId(id, OrderStatus.PENDING)) {
+            throw new IllegalStateException("주문 확인 중인 상품은 삭제할 수 없습니다.");
+        }
+
+        product.softDelete();
     }
 
 }
