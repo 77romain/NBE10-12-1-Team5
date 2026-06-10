@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const NAV_ITEMS = [
+  { label: "대시보드", href: "/admin/dashboard" },
   { label: "계정 관리", href: "/admin/accounts" },
   { label: "주문 관리", href: "/admin/orders" },
   { label: "상품 관리", href: "/admin/products" },

@@ -42,77 +42,77 @@ public class BaseInitData {
 
                 Product product1 = productRepository.save(new Product(
                         "Ethiopia Yirgacheffe",
-                        null,
+                        "https://i.postimg.cc/fRXXGg1h/etiopia-yegachepeu.webp",
                         "플로럴, 시트러스 계열의 밝고 산뜻한 에티오피아 원두",
                         1000,
                         253
                 ));
                 Product product2 = productRepository.save(new Product(
                         "Colombia Huila",
-                        null,
+                        "https://i.postimg.cc/bv9nJSyw/kollombia-hwilla.webp",
                         "카라멜, 헤이즐넛 풍미의 균형 잡힌 콜롬비아 원두",
                         3500,
                         236
                 ));
                 Product product3 = productRepository.save(new Product(
                         "Guatemala Antigua",
-                        null,
+                        "https://i.postimg.cc/SsZzL0Yd/gwatemalla-antigua.jpg",
                         "다크초콜릿, 스모키 향의 과테말라 원두",
                         5000,
                         217
                 ));
                 Product product4 = productRepository.save(new Product(
                         "Brazil Santos",
-                        null,
+                        "https://i.postimg.cc/3NV46gB8/beulajil-santoseu.webp",
                         "고소하고 부드러운 브라질 산토스 원두",
                         7500,
                         195
                 ));
                 Product product5 = productRepository.save(new Product(
                         "Kenya AA",
-                        null,
+                        "https://i.postimg.cc/4NHhcSft/Kenya-AA.webp",
                         "자몽, 블랙커런트의 강렬한 산미와 와인 같은 풍미의 케냐 원두",
                         4500,
                         170
                 ));
                 Product product6 = productRepository.save(new Product(
                         "Costa Rica Tarrazu",
-                        null,
+                        "https://i.postimg.cc/wB2tHKVZ/Costa-Rica-Tarrazu.jpg",
                         "깔끔한 산미와 시트러스, 아몬드의 고소함이 어우러진 코스타리카 원두",
                         13000,
                         158
                 ));
                 Product product7 = productRepository.save(new Product(
                         "Indonesia Sumatra Mandheling",
-                        null,
+                        "https://i.postimg.cc/vBm4ZP29/Indonesia-Sumatra-Mandheling.webp",
                         "묵직한 바디감과 흙 내음, 허브 향이 매력적인 인도네시아 원두",
                         9500,
                         131
                 ));
                 Product product8 = productRepository.save(new Product(
                         "Ethiopia Sidamo",
-                        null,
+                        "https://i.postimg.cc/GhDjkQdk/Ethiopia-Sidamo.webp",
                         "베리류의 달콤함과 깊은 꽃향기가 감도는 에티오피아 원두",
                         12000,
                         119
                 ));
                 Product product9 = productRepository.save(new Product(
                         "Jamaica Blue Mountain",
-                        null,
+                        "https://i.postimg.cc/zfxwJ2F1/Jamaica-Blue-Mountain.webp",
                         "부드러운 산미와 쓴맛이 완벽한 조화를 이루는 자메이카 명품 원두",
                         25000,
                         95
                 ));
                 Product product10 = productRepository.save(new Product(
                         "Tanzania Kilimanjaro",
-                        null,
+                        "https://i.postimg.cc/C5qbshTT/Tanzania-Kilimanjaro.webp",
                         "짜릿한 산미와 와인 향, 훌륭한 밸런스를 가진 탄자니아 원두",
                         12500,
                         74
                 ));
                 Product product11 = productRepository.save(new Product(
                         "El Salvador Bourbon",
-                        null,
+                        "https://i.postimg.cc/Kck72NK6/El-Salvador-Bourbon.jpg",
                         "꿀 같은 달콤함과 부드러운 밀크초콜릿 풍미의 엘살바도르 원두",
                         10000,
                         57

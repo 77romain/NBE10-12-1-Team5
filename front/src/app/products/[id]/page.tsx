@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -20,7 +19,7 @@ export default function ItemDetailPage() {
 
   useEffect(() => {
     setCartCount(getCart().reduce((sum, c) => sum + c.quantity, 0));
-    apiFetch(`/api/Product/${id}`)
+    apiFetch(`/api/product/${id}`)
       .then(setItem)
       .finally(() => setLoading(false));
   }, [id]);
@@ -82,7 +81,7 @@ export default function ItemDetailPage() {
         <div className="border border-gray-300 rounded-2xl p-8 w-full max-w-sm flex flex-col gap-6">
           {/* 상품 이미지 */}
           <div className="w-full aspect-square rounded-2xl overflow-hidden">
-            <Image src="/coffee_bean.jpg" alt={item.name} width={400} height={400} className="w-full h-full object-cover" />
+            <img src={item.imageUrl || "/coffee_bean.jpg"} alt={item.name} className="w-full h-full object-cover" />
           </div>
 
           {/* 상품 정보 */}

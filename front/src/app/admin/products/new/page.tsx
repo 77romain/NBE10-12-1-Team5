@@ -10,6 +10,7 @@ export default function ProductNewPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
+    imageUrl: "",
     price: "",
     inventory: "",
     description: "",
@@ -41,10 +42,11 @@ export default function ProductNewPage() {
 
     setSubmitting(true);
     try {
-      const res: RsData<ProductDto> = await apiFetch("/api/Product", {
+      const res: RsData<ProductDto> = await apiFetch("/api/product", {
         method: "POST",
         body: JSON.stringify({
           name: form.name.trim(),
+          imageUrl: form.imageUrl.trim() || "/coffee_bean.jpg",
           price: Number(form.price),
           inventory: Number(form.inventory),
           description: form.description.trim(),
@@ -76,10 +78,18 @@ export default function ProductNewPage() {
         onSubmit={handleSubmit}
         className="border border-gray-300 rounded-xl p-6 flex flex-col gap-5"
       >
-        {/* Image placeholder */}
-        <div className="w-full h-40 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400">
-          <span className="text-5xl mb-2">☕</span>
-          <span className="text-xs">Image</span>
+        {/* 이미지 URL */}
+        <div>
+          <label className="text-sm text-gray-600 block mb-1.5 font-medium">
+            이미지 URL
+          </label>
+          <input
+            type="text"
+            value={form.imageUrl}
+            onChange={(e) => updateForm("imageUrl", e.target.value)}
+            placeholder="https://... (비우면 기본 이미지 사용)"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+          />
         </div>
 
         {/* 상품명 */}

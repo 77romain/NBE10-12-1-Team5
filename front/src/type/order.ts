@@ -24,17 +24,19 @@ export type OrderDto = {
   status: OrderStatus;
   totalPrice: number;
   deliveryDate: string; // YYYY-MM-DD
+  deleteDate?: string | null;
 };
 
 export type OrderProductDto = {
   id: number;
   createDate: string;
-  modifyDate: string;
+  modifyDate?: string;
   orderId: number;
   productId: number;
   productQuantity: number;
   productName: string;
   productPrice: number;
+  deleteDate?: string | null;
 };
 
 // 하위 호환성을 위해 유지

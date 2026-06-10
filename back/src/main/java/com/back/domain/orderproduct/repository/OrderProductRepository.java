@@ -50,7 +50,7 @@ public interface OrderProductRepository extends JpaRepository<OrderProduct, Inte
           join op.product p
          where o.status <> com.back.domain.order.entity.OrderStatus.CANCELED
          group by p.name
-         order by sum(op.productQuantity) desc
+         order by totalQty desc
     """)
     List<DashboardProjection.TopSellingItemResponse> findTopSellingItems();
 }
