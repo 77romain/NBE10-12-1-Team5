@@ -46,8 +46,8 @@ Spring Boot 기반의 REST API 서버와 HTML 프론트엔드로 구성.
 - Build Tool: Gradle (Kotlin DSL)
 
 ### Database
-- 운영: MySQL 8.4 (Docker)
-- 개발/테스트: H2 (In-memory)
+- 운영/개발: MySQL 8.4 (Docker)
+- 테스트: H2 (In-memory)
 
 ### Infra
 - Docker Compose (MySQL 컨테이너 기반 로컬 환경)
@@ -64,7 +64,7 @@ Spring Boot 기반의 REST API 서버와 HTML 프론트엔드로 구성.
 - 주문 생성 즉시 SSE를 통해 관리자 화면에 실시간 알림 발송
 
 ### 주문 상태 관리
-- 상태 흐름: PENDING(주문확인중) → PROCESSING(처리중) → SHIPPED(발송완료) → DELIVERED(배송완료) / CANCELED(취소)
+- 상태 흐름: `PENDING`(주문확인중) → `PROCESSING`(처리중) → `SHIPPED`(발송완료) → `DELIVERED`(배송완료) / `CANCELED`(취소)
 - 이미 취소된 주문은 어떤 상태로도 변경 불가
 - 취소는 PENDING 상태일 때만 가능하며, 취소 시 해당 주문의 상품 재고 자동 복원
 
