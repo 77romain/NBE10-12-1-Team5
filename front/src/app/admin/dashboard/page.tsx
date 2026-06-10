@@ -81,7 +81,7 @@ function PieChart({ data, onSliceClick }: { data: PieSlice[]; onSliceClick?: (la
 ──────────────────────────────────────── */
 type BarItem = { label: string; value: number };
 
-function BarChart({ data, color }: { data: BarItem[]; color: string }) {
+function BarChart({ data, color, onBarClick }: { data: BarItem[]; color: string; onBarClick?: (label: string) => void }) {
   if (data.length === 0)
     return <p className="text-xs text-gray-400 text-center py-8">데이터 없음</p>;
 
@@ -118,12 +118,24 @@ function BarChart({ data, color }: { data: BarItem[]; color: string }) {
             ? `${Math.round(d.value / 10000)}만원`
             : `${d.value.toLocaleString()}`;
         return (
-          <g key={d.label}>
+          <g
+            key={d.label}
+            onClick={() => onBarClick?.(d.label)}
+            style={{ cursor: onBarClick ? "pointer" : "default" }}
+          >
             <rect
               x={x} y={baseY - barH}
               width={barW} height={barH}
               rx={5} fill={color} fillOpacity={0.85}
             />
+            {/* hover 확장 투명 클릭 영역 */}
+            {onBarClick && (
+              <rect
+                x={x} y={paddingTop}
+                width={barW} height={chartH + paddingBottom}
+                fill="transparent"
+              />
+            )}
             {/* 막대 위 금액 */}
             <text
               x={x + barW / 2} y={baseY - barH - 4}
@@ -142,6 +154,104 @@ function BarChart({ data, color }: { data: BarItem[]; color: string }) {
         );
       })}
     </svg>
+  );
+}
+
+/* ────────────────────────────────────────
+   주문 목록 모달
+──────────────────────────────────────── */
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "주문확인중",
+  PROCESSING: "처리중",
+  SHIPPED: "발송완료",
+  DELIVERED: "배송완료",
+  CANCELED: "취소",
+};
+const STATUS_COLOR: Record<string, string> = {
+  PENDING: "text-amber-500",
+  PROCESSING: "text-blue-500",
+  SHIPPED: "text-indigo-500",
+  DELIVERED: "text-green-600",
+  CANCELED: "text-red-500",
+};
+
+function OrderListModal({
+  title,
+  orders,
+  onClose,
+}: {
+  title: string;
+  orders: OrderDto[];
+  onClose: () => void;
+}) {
+  const nonCanceled = orders.filter((o) => o.status !== "CANCELED");
+  const totalAmount = nonCanceled.reduce((s, o) => s + o.totalPrice, 0);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-[560px] max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h3 className="text-base font-bold text-gray-800">{title} 주문 목록</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              총 {orders.length}건 &nbsp;·&nbsp; 매출 {totalAmount.toLocaleString()}원 (취소 제외)
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 목록 */}
+        <div className="overflow-y-auto flex-1">
+          {orders.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-12">주문 없음</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50">
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-4 font-semibold text-gray-500 w-10">No.</th>
+                  <th className="text-left py-2 px-4 font-semibold text-gray-500">주소</th>
+                  <th className="text-left py-2 px-4 font-semibold text-gray-500 w-24">배송일</th>
+                  <th className="text-right py-2 px-4 font-semibold text-gray-500 w-28">금액</th>
+                  <th className="text-center py-2 px-4 font-semibold text-gray-500 w-24">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o, idx) => (
+                  <tr
+                    key={o.id}
+                    className={`border-b border-gray-50 last:border-0 ${
+                      o.status === "CANCELED" ? "opacity-50" : ""
+                    }`}
+                  >
+                    <td className="py-2.5 px-4 text-gray-400">{String(idx + 1).padStart(2, "0")}</td>
+                    <td className="py-2.5 px-4 text-gray-700 max-w-[180px] truncate">{o.address}</td>
+                    <td className="py-2.5 px-4 text-gray-500">{o.deliveryDate}</td>
+                    <td className="py-2.5 px-4 text-right font-medium text-gray-800">
+                      {o.totalPrice.toLocaleString()}원
+                    </td>
+                    <td className={`py-2.5 px-4 text-center font-medium ${STATUS_COLOR[o.status] ?? "text-gray-500"}`}>
+                      {STATUS_LABEL[o.status] ?? o.status}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -246,6 +356,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
   const [selectedTopItem, setSelectedTopItem] = useState<TopSellingItemResponse | undefined>(undefined);
+  const [orderModal, setOrderModal] = useState<{ title: string; orders: OrderDto[] } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -279,6 +390,18 @@ export default function DashboardPage() {
       setSelectedProduct(product);
       setSelectedTopItem(topItem);
     }
+  };
+
+  const handleDailyBarClick = (label: string) => {
+    // label: "2026-06-10"
+    const filtered = orders.filter((o) => o.deliveryDate === label);
+    setOrderModal({ title: label, orders: filtered });
+  };
+
+  const handleMonthBarClick = (label: string) => {
+    // label: "2026-06"
+    const filtered = orders.filter((o) => o.deliveryDate?.startsWith(label));
+    setOrderModal({ title: label, orders: filtered });
   };
 
   const today = getTodayStr();
@@ -341,6 +464,7 @@ export default function DashboardPage() {
                 value: s.getTotalSalesAmount,
               }))}
               color="#93c5fd"
+              onBarClick={handleDailyBarClick}
             />
           </div>
         </div>
@@ -369,6 +493,7 @@ export default function DashboardPage() {
                 value: s.getTotalSalesAmount,
               }))}
               color="#6ee7b7"
+              onBarClick={handleMonthBarClick}
             />
           </div>
         </div>
@@ -380,6 +505,14 @@ export default function DashboardPage() {
           product={selectedProduct}
           topItem={selectedTopItem}
           onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {orderModal && (
+        <OrderListModal
+          title={orderModal.title}
+          orders={orderModal.orders}
+          onClose={() => setOrderModal(null)}
         />
       )}
     </div>
