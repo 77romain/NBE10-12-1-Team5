@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/backend/client";
 import type { TopSellingItemResponse, SalesResponse } from "@/type/dashboard";
 import type { OrderDto } from "@/type/order";
+import type { ProductDto } from "@/type/product";
 
 function getTodayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -16,7 +17,7 @@ type PieSlice = { label: string; value: number; color: string };
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
-function PieChart({ data }: { data: PieSlice[] }) {
+function PieChart({ data, onSliceClick }: { data: PieSlice[]; onSliceClick?: (label: string) => void }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0)
     return <p className="text-xs text-gray-400 text-center py-8">데이터 없음</p>;
@@ -48,7 +49,11 @@ function PieChart({ data }: { data: PieSlice[] }) {
   return (
     <svg viewBox="0 0 220 220" className="w-full">
       {slices.map((s) => (
-        <g key={s.label}>
+        <g
+          key={s.label}
+          onClick={() => onSliceClick?.(s.label)}
+          style={{ cursor: onSliceClick ? "pointer" : "default" }}
+        >
           <path d={s.path} fill={s.color} stroke="white" strokeWidth={2} />
           {/* 메달 이모지 */}
           <text
@@ -143,26 +148,121 @@ function BarChart({ data, color }: { data: BarItem[]; color: string }) {
 /* ────────────────────────────────────────
    대시보드 페이지
 ──────────────────────────────────────── */
+function ProductModal({
+  product,
+  topItem,
+  onClose,
+}: {
+  product: ProductDto;
+  topItem?: TopSellingItemResponse;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-80 max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 className="text-base font-bold text-gray-800">상품 정보</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 이미지 */}
+        <div className="w-full aspect-square rounded-xl overflow-hidden bg-gray-100">
+          <img
+            src={product.imageUrl || "/coffee_bean.jpg"}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* 상품명 */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500">상품명</span>
+          <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800">
+            {product.name}
+          </div>
+        </div>
+
+        {/* 가격 / 재고 */}
+        <div className="flex gap-3">
+          <div className="flex-1 flex flex-col gap-1">
+            <span className="text-xs text-gray-500">가격 (원)</span>
+            <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800">
+              {product.price.toLocaleString()}
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col gap-1">
+            <span className="text-xs text-gray-500">재고 (개)</span>
+            <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800">
+              {product.inventory}
+            </div>
+          </div>
+        </div>
+
+        {/* 상품 설명 */}
+        {product.description && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-500">상품 설명</span>
+            <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+              {product.description}
+            </div>
+          </div>
+        )}
+
+        {/* 판매 통계 */}
+        {topItem && (
+          <div className="bg-gray-50 rounded-xl px-4 py-3 flex justify-between text-sm">
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xs text-gray-400">총 판매량</span>
+              <span className="font-bold text-gray-800">{topItem.getTotalQty.toLocaleString()}개</span>
+            </div>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xs text-gray-400">총 매출</span>
+              <span className="font-bold text-blue-600">{topItem.getTotalSalesAmount.toLocaleString()}원</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [topItems, setTopItems] = useState<TopSellingItemResponse[]>([]);
   const [monthSales, setMonthSales] = useState<SalesResponse[]>([]);
   const [dailySales, setDailySales] = useState<SalesResponse[]>([]);
   const [orders, setOrders] = useState<OrderDto[]>([]);
+  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
+  const [selectedTopItem, setSelectedTopItem] = useState<TopSellingItemResponse | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [top, month, daily, orderList] = await Promise.all([
+        const [top, month, daily, orderList, productList] = await Promise.all([
           apiFetch("/api/dashboard/topSellingItems") as Promise<TopSellingItemResponse[]>,
           apiFetch("/api/dashboard/monthSales") as Promise<SalesResponse[]>,
           apiFetch("/api/dashboard/dailySales") as Promise<SalesResponse[]>,
           apiFetch("/api/order") as Promise<OrderDto[]>,
+          apiFetch("/api/product") as Promise<ProductDto[]>,
         ]);
         setTopItems(top.slice(0, 3));
         setMonthSales(month);
         setDailySales(daily);
         setOrders(Array.isArray(orderList) ? orderList : []);
+        setProducts(Array.isArray(productList) ? productList : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -171,6 +271,15 @@ export default function DashboardPage() {
     };
     fetchAll();
   }, []);
+
+  const handleSliceClick = (label: string) => {
+    const product = products.find((p) => p.name === label);
+    const topItem = topItems.find((t) => t.getName === label);
+    if (product) {
+      setSelectedProduct(product);
+      setSelectedTopItem(topItem);
+    }
+  };
 
   const today = getTodayStr();
   const todayCount = orders.filter((o) => o.createDate?.slice(0, 10) === today).length;
@@ -245,7 +354,7 @@ export default function DashboardPage() {
             {pieData.length === 0 ? (
               <p className="text-xs text-gray-400">데이터 없음</p>
             ) : (
-              <PieChart data={pieData} />
+              <PieChart data={pieData} onSliceClick={handleSliceClick} />
             )}
           </div>
         </div>
@@ -265,6 +374,14 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          topItem={selectedTopItem}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </div>
   );
 }
