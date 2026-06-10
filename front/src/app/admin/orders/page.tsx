@@ -80,13 +80,57 @@ function combineItems(itemLists: OrderProductDto[][]): OrderProductDto[] {
   return Array.from(map.values());
 }
 
+const PAGE_SIZE = 10;
+
 type EditProduct = { productId: number; productName: string; productQuantity: number };
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const half = 2;
+  let start = Math.max(1, currentPage - half);
+  const end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+  const pages = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  return (
+    <div className="flex items-center justify-center gap-1 pt-3 pb-1">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      >◀</button>
+      {pages.map((p) => (
+        <button
+          key={p}
+          onClick={() => onPageChange(p)}
+          className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+            p === currentPage ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50"
+          }`}
+        >{p}</button>
+      ))}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      >▶</button>
+      <span className="ml-2 text-xs text-gray-400">{currentPage} / {totalPages} 페이지</span>
+    </div>
+  );
+}
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [userMap, setUserMap] = useState<Map<number, UserDto>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // 선택된 그룹
   const [selectedGroup, setSelectedGroup] = useState<OrderGroup | null>(null);
@@ -177,6 +221,9 @@ export default function OrdersPage() {
         return formatUserLabel(user, g.userId).toLowerCase().includes(searchQuery.toLowerCase());
       })
     : grouped;
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // 주문처리 현황 (개별 주문 기준)
   const statusCounts = orders.reduce<Record<OrderStatus, number>>(
@@ -357,7 +404,7 @@ export default function OrdersPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             placeholder="이메일 검색..."
             className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400"
           />
@@ -386,7 +433,7 @@ export default function OrdersPage() {
               {!loading && filtered.length === 0 && (
                 <tr><td colSpan={7} className="text-center py-14 text-gray-400">주문이 없습니다.</td></tr>
               )}
-              {filtered.map((group, index) => {
+              {paginated.map((group, index) => {
                 const user = userMap.get(group.userId);
                 const now = new Date();
                 const isOverdue = canAct(group.status) && !!group.deliveryDate &&
@@ -403,7 +450,7 @@ export default function OrdersPage() {
                     }`}
                   >
                     <td className="py-3 px-3 text-gray-500">
-                      {String(index + 1).padStart(2, "0")}
+                      {String((currentPage - 1) * PAGE_SIZE + index + 1).padStart(2, "0")}
                       {group.orders.length > 1 && (
                         <span className="ml-1 text-xs text-blue-400">×{group.orders.length}</span>
                       )}
@@ -469,6 +516,11 @@ export default function OrdersPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(p) => { setCurrentPage(p); setSelectedGroup(null); setSelectedGroupItems([]); }}
+          />
         </div>
       </div>
 

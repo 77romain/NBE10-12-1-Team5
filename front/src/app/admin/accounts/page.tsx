@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/backend/client";
 import type { UserDto } from "@/type/account";
 
+const PAGE_SIZE = 10;
+
 type EditForm = {
   email: string;
   address: string;
@@ -11,10 +13,52 @@ type EditForm = {
   postcode: string;
 };
 
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  const half = 2;
+  let start = Math.max(1, currentPage - half);
+  const end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+  const pages = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  return (
+    <div className="flex items-center justify-center gap-1 pt-3 pb-1">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      >◀</button>
+      {pages.map((p) => (
+        <button
+          key={p}
+          onClick={() => onPageChange(p)}
+          className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+            p === currentPage ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50"
+          }`}
+        >{p}</button>
+      ))}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      >▶</button>
+      <span className="ml-2 text-xs text-gray-400">{currentPage} / {totalPages} 페이지</span>
+    </div>
+  );
+}
+
 export default function AccountsPage() {
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     email: "",
@@ -44,6 +88,9 @@ export default function AccountsPage() {
         u.address.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : users;
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleDelete = async (id: number) => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
@@ -111,7 +158,7 @@ export default function AccountsPage() {
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
           placeholder="이메일 또는 주소 검색..."
           className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-gray-400"
         />
@@ -145,10 +192,10 @@ export default function AccountsPage() {
                 <td colSpan={7} className="text-center py-14 text-gray-400">계정이 없습니다.</td>
               </tr>
             )}
-            {filtered.map((user, index) =>
+            {paginated.map((user, index) =>
               editingId === user.id ? (
                 <tr key={user.id} className="border-b border-gray-100 bg-blue-50">
-                  <td className="py-2 px-3 text-gray-500">{String(index + 1).padStart(2, "0")}</td>
+                  <td className="py-2 px-3 text-gray-500">{String((currentPage - 1) * PAGE_SIZE + index + 1).padStart(2, "0")}</td>
                   <td className="py-2 px-3">
                     <input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="w-full border border-gray-300 rounded px-2 py-1 text-xs" />
                   </td>
@@ -176,7 +223,7 @@ export default function AccountsPage() {
                     !user.email ? "bg-red-50 hover:bg-red-100" : "hover:bg-gray-50"
                   }`}
                 >
-                  <td className="py-3 px-3 text-gray-500">{String(index + 1).padStart(2, "0")}</td>
+                  <td className="py-3 px-3 text-gray-500">{String((currentPage - 1) * PAGE_SIZE + index + 1).padStart(2, "0")}</td>
                   <td className="py-3 px-3 truncate">
                     {user.email ? (
                       <span>{user.email}</span>
@@ -204,6 +251,12 @@ export default function AccountsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }
