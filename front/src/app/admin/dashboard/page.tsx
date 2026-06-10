@@ -282,7 +282,7 @@ export default function DashboardPage() {
   };
 
   const today = getTodayStr();
-  const todayCount = orders.filter((o) => o.createDate?.slice(0, 10) === today).length;
+  const todayCount = orders.filter((o) => o.deliveryDate === today).length;
   const pendingCount = orders.filter((o) => o.status === "PENDING").length;
   const canceledCount = orders.filter((o) => o.status === "CANCELED").length;
   const todaySalesAmount =
@@ -336,7 +336,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-semibold text-gray-600 mb-4">일별 매출</h3>
           <div className="flex-1 flex items-end">
             <BarChart
-              data={dailySales.map((s) => ({
+              data={dailySales.slice(-10).map((s) => ({
                 label: s.getOrderDate,
                 value: s.getTotalSalesAmount,
               }))}
