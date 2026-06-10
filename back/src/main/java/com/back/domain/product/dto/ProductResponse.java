@@ -12,7 +12,8 @@ public record ProductResponse(
         int inventory,
         String description,
         LocalDateTime createDate,
-        LocalDateTime modifyDate
+        LocalDateTime modifyDate,
+        LocalDateTime deleteDate
 ) {
     public ProductResponse(Product product) {
         this(
@@ -23,7 +24,8 @@ public record ProductResponse(
                 product.getInventory(),
                 product.getDescription(),
                 product.getCreateDate(),
-                product.getModifyDate()
+                product.getModifyDate(),
+                product.getDeleteDate()
         );
     }
 }

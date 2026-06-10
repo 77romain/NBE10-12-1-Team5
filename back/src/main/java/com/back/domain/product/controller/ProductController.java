@@ -65,13 +65,12 @@ public class ProductController {
     @Transactional
     @Operation(summary = "상품 삭제")
     public RsData<Void> deleteProduct(@PathVariable int id) {
-        Product product = productService.findById(id).get();
 
-        productService.delete(product);
+        productService.delete(id);
 
         return new RsData<>(
             "200-1",
-                "%d번 상품이 삭제되었습니다.".formatted(product.getId())
+                "%d번 상품이 삭제되었습니다.".formatted(id)
         );
     }
 
