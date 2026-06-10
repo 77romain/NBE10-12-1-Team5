@@ -3,24 +3,166 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/backend/client";
 import type { TopSellingItemResponse, SalesResponse } from "@/type/dashboard";
+import type { OrderDto } from "@/type/order";
 
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/* ────────────────────────────────────────
+   파이 차트 (SVG)
+──────────────────────────────────────── */
+type PieSlice = { label: string; value: number; color: string };
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+function PieChart({ data }: { data: PieSlice[] }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0)
+    return <p className="text-xs text-gray-400 text-center py-8">데이터 없음</p>;
+
+  const cx = 110, cy = 110, r = 88;
+  let startAngle = -Math.PI / 2;
+
+  const slices = data.map((d, i) => {
+    const angle = (d.value / total) * 2 * Math.PI;
+    const endAngle = startAngle + angle;
+    const midAngle = startAngle + angle / 2;
+
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`;
+
+    // 슬라이스 내부 중심점 (반지름의 58%)
+    const lr = r * 0.58;
+    const lx = cx + lr * Math.cos(midAngle);
+    const ly = cy + lr * Math.sin(midAngle);
+
+    startAngle = endAngle;
+    return { ...d, path, lx, ly, medal: MEDALS[i] ?? "" };
+  });
+
+  return (
+    <svg viewBox="0 0 220 220" className="w-full">
+      {slices.map((s) => (
+        <g key={s.label}>
+          <path d={s.path} fill={s.color} stroke="white" strokeWidth={2} />
+          {/* 메달 이모지 */}
+          <text
+            x={s.lx.toFixed(1)} y={(s.ly - 9).toFixed(1)}
+            textAnchor="middle" dominantBaseline="middle" fontSize={15}
+          >
+            {s.medal}
+          </text>
+          {/* 상품명 */}
+          <text
+            x={s.lx.toFixed(1)} y={(s.ly + 9).toFixed(1)}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={7} fontWeight="600" fill="#374151"
+          >
+            {s.label.length > 11 ? s.label.slice(0, 11) + "…" : s.label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ────────────────────────────────────────
+   바 차트 (SVG)
+──────────────────────────────────────── */
+type BarItem = { label: string; value: number };
+
+function BarChart({ data, color }: { data: BarItem[]; color: string }) {
+  if (data.length === 0)
+    return <p className="text-xs text-gray-400 text-center py-8">데이터 없음</p>;
+
+  const chartH = 120;
+  const paddingTop = 20;   // 막대 위 금액 텍스트 공간
+  const paddingBottom = 28;
+  const barW = 32;
+  const gap = 16;
+  const paddingX = 20;
+  const naturalW = data.length * (barW + gap) - gap + paddingX * 2;
+  const totalW = Math.max(280, naturalW);
+  const barsW = data.length * (barW + gap) - gap;
+  const startX = (totalW - barsW) / 2;
+  const maxVal = Math.max(...data.map((d) => d.value), 1);
+  const totalH = paddingTop + chartH + paddingBottom;
+  const baseY = paddingTop + chartH;
+
+  return (
+    <svg viewBox={`0 0 ${totalW} ${totalH}`} className="w-full">
+      <line
+        x1={paddingX} y1={baseY}
+        x2={totalW - paddingX} y2={baseY}
+        stroke="#e5e7eb" strokeWidth={1}
+      />
+      {data.map((d, i) => {
+        const barH = Math.max(3, (d.value / maxVal) * chartH);
+        const x = startX + i * (barW + gap);
+        const shortLabel =
+          d.label.length === 10
+            ? d.label.slice(5)   // YYYY-MM-DD → MM-DD
+            : d.label.slice(2);  // YYYY-MM → YY-MM
+        const amountLabel =
+          d.value >= 10000
+            ? `${Math.round(d.value / 10000)}만원`
+            : `${d.value.toLocaleString()}`;
+        return (
+          <g key={d.label}>
+            <rect
+              x={x} y={baseY - barH}
+              width={barW} height={barH}
+              rx={5} fill={color} fillOpacity={0.85}
+            />
+            {/* 막대 위 금액 */}
+            <text
+              x={x + barW / 2} y={baseY - barH - 4}
+              textAnchor="middle" fontSize={8} fill="#6b7280"
+            >
+              {amountLabel}
+            </text>
+            {/* 하단 날짜 레이블 */}
+            <text
+              x={x + barW / 2} y={baseY + 17}
+              textAnchor="middle" fontSize={10} fill="#9ca3af"
+            >
+              {shortLabel}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ────────────────────────────────────────
+   대시보드 페이지
+──────────────────────────────────────── */
 export default function DashboardPage() {
   const [topItems, setTopItems] = useState<TopSellingItemResponse[]>([]);
   const [monthSales, setMonthSales] = useState<SalesResponse[]>([]);
   const [dailySales, setDailySales] = useState<SalesResponse[]>([]);
+  const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [top, month, daily] = await Promise.all([
+        const [top, month, daily, orderList] = await Promise.all([
           apiFetch("/api/dashboard/topSellingItems") as Promise<TopSellingItemResponse[]>,
           apiFetch("/api/dashboard/monthSales") as Promise<SalesResponse[]>,
           apiFetch("/api/dashboard/dailySales") as Promise<SalesResponse[]>,
+          apiFetch("/api/order") as Promise<OrderDto[]>,
         ]);
         setTopItems(top.slice(0, 3));
         setMonthSales(month);
         setDailySales(daily);
+        setOrders(Array.isArray(orderList) ? orderList : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -30,10 +172,26 @@ export default function DashboardPage() {
     fetchAll();
   }, []);
 
-  const MEDAL = ["🥇", "🥈", "🥉"];
+  const today = getTodayStr();
+  const todayCount = orders.filter((o) => o.createDate?.slice(0, 10) === today).length;
+  const pendingCount = orders.filter((o) => o.status === "PENDING").length;
+  const canceledCount = orders.filter((o) => o.status === "CANCELED").length;
+  const todaySalesAmount =
+    dailySales.find((s) => s.getOrderDate === today)?.getTotalSalesAmount ?? 0;
 
-  const maxMonthAmount = Math.max(...monthSales.map((s) => s.getTotalSalesAmount), 1);
-  const maxDailyAmount = Math.max(...dailySales.map((s) => s.getTotalSalesAmount), 1);
+  const PIE_COLORS = ["#93c5fd", "#6ee7b7", "#fde68a"];
+  const pieData: PieSlice[] = topItems.map((item, i) => ({
+    label: item.getName,
+    value: item.getTotalQty,
+    color: PIE_COLORS[i] ?? "#d1d5db",
+  }));
+
+  const summaryRows = [
+    { label: "오늘 주문 건수", value: `${todayCount}건`,                          style: "text-gray-900" },
+    { label: "오늘 매출",      value: `${todaySalesAmount.toLocaleString()}원`,    style: "text-blue-600" },
+    { label: "대기 주문",      value: `${pendingCount}건`,                         style: "text-amber-500" },
+    { label: "취소 주문",      value: `${canceledCount}건`,                        style: "text-red-500" },
+  ];
 
   if (loading) {
     return (
@@ -44,123 +202,68 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 h-full">
       <h2 className="text-base font-bold text-gray-800">대시보드</h2>
 
-      {/* TOP 3 베스트셀러 */}
-      <section>
-        <h3 className="text-sm font-semibold text-gray-600 mb-3">베스트셀러 TOP 3</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {topItems.length === 0 ? (
-            <p className="text-sm text-gray-400 col-span-3 text-center py-8">데이터가 없습니다.</p>
-          ) : (
-            topItems.map((item, i) => (
-              <div
-                key={item.getName}
-                className="border border-gray-200 rounded-xl p-4 flex flex-col gap-2 bg-white"
-              >
-                <span className="text-2xl">{MEDAL[i]}</span>
-                <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">
-                  {item.getName}
-                </p>
-                <div className="mt-auto flex flex-col gap-0.5">
-                  <span className="text-xs text-gray-500">
-                    판매 수량{" "}
-                    <strong className="text-gray-800">{item.getTotalQty.toLocaleString()}개</strong>
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    매출액{" "}
-                    <strong className="text-gray-800">
-                      {item.getTotalSalesAmount.toLocaleString()}원
-                    </strong>
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* ── 좌상단: 요약 카드 ── */}
+        <div className="border border-gray-200 rounded-2xl p-6 flex flex-col justify-center gap-0">
+          {summaryRows.map(({ label, value, style }, i, arr) => (
+            <div
+              key={label}
+              className={`flex items-center justify-between py-4 ${
+                i < arr.length - 1 ? "border-b border-gray-100" : ""
+              }`}
+            >
+              <span className={`text-sm font-semibold ${style}`}>{label}</span>
+              <span className={`text-2xl font-bold ${style}`}>{value}</span>
+            </div>
+          ))}
         </div>
-      </section>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* 월별 매출 */}
-        <section>
-          <h3 className="text-sm font-semibold text-gray-600 mb-3">월별 매출</h3>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            {monthSales.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">데이터가 없습니다.</p>
+        {/* ── 우상단: 일별 매출 바 차트 ── */}
+        <div className="border border-gray-200 rounded-2xl p-5 flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-600 mb-4">일별 매출</h3>
+          <div className="flex-1 flex items-end">
+            <BarChart
+              data={dailySales.map((s) => ({
+                label: s.getOrderDate,
+                value: s.getTotalSalesAmount,
+              }))}
+              color="#93c5fd"
+            />
+          </div>
+        </div>
+
+        {/* ── 좌하단: TOP 3 파이 차트 ── */}
+        <div className="border border-gray-200 rounded-2xl p-5 flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2">
+            가장 많이 팔린 원두 TOP 3
+          </h3>
+          <div className="flex-1 flex items-center justify-center">
+            {pieData.length === 0 ? (
+              <p className="text-xs text-gray-400">데이터 없음</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left py-2.5 px-4 font-semibold text-gray-500 text-xs">월</th>
-                    <th className="text-right py-2.5 px-4 font-semibold text-gray-500 text-xs">매출액</th>
-                    <th className="py-2.5 px-4 w-24" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthSales.map((s) => (
-                    <tr key={s.getOrderDate} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2.5 px-4 text-gray-700 text-xs">{s.getOrderDate}</td>
-                      <td className="py-2.5 px-4 text-right font-medium text-gray-800 text-xs">
-                        {s.getTotalSalesAmount.toLocaleString()}원
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className="bg-amber-400 h-1.5 rounded-full"
-                            style={{
-                              width: `${(s.getTotalSalesAmount / maxMonthAmount) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <PieChart data={pieData} />
             )}
           </div>
-        </section>
+        </div>
 
-        {/* 일별 매출 */}
-        <section>
-          <h3 className="text-sm font-semibold text-gray-600 mb-3">일별 매출</h3>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            {dailySales.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">데이터가 없습니다.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left py-2.5 px-4 font-semibold text-gray-500 text-xs">날짜</th>
-                    <th className="text-right py-2.5 px-4 font-semibold text-gray-500 text-xs">매출액</th>
-                    <th className="py-2.5 px-4 w-24" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {dailySales.map((s) => (
-                    <tr key={s.getOrderDate} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2.5 px-4 text-gray-700 text-xs">{s.getOrderDate}</td>
-                      <td className="py-2.5 px-4 text-right font-medium text-gray-800 text-xs">
-                        {s.getTotalSalesAmount.toLocaleString()}원
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className="bg-blue-400 h-1.5 rounded-full"
-                            style={{
-                              width: `${(s.getTotalSalesAmount / maxDailyAmount) * 100}%`,
-                            }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+        {/* ── 우하단: 월별 매출 바 차트 ── */}
+        <div className="border border-gray-200 rounded-2xl p-5 flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-600 mb-4">월별 매출</h3>
+          <div className="flex-1 flex items-end">
+            <BarChart
+              data={monthSales.map((s) => ({
+                label: s.getOrderDate,
+                value: s.getTotalSalesAmount,
+              }))}
+              color="#6ee7b7"
+            />
           </div>
-        </section>
+        </div>
+
       </div>
     </div>
   );
