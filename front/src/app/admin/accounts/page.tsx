@@ -122,16 +122,16 @@ export default function AccountsPage() {
 
       {/* Table */}
       <div className="border border-gray-300 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="text-left py-3 px-3 font-semibold text-gray-500 w-10">No.</th>
               <th className="text-left py-3 px-3 font-semibold text-gray-500">이메일</th>
               <th className="text-left py-3 px-3 font-semibold text-gray-500">주소</th>
-              <th className="text-left py-3 px-3 font-semibold text-gray-500 w-24">상세주소</th>
-              <th className="text-left py-3 px-3 font-semibold text-gray-500 w-20">우편번호</th>
-              <th className="text-left py-3 px-3 font-semibold text-gray-500 w-24">등록일</th>
-              <th className="py-3 px-3 w-28" />
+              <th className="text-left py-3 px-3 font-semibold text-gray-500">상세주소</th>
+              <th className="text-left py-3 px-3 font-semibold text-gray-500">우편번호</th>
+              <th className="text-left py-3 px-3 font-semibold text-gray-500">등록일</th>
+              <th className="py-3 px-3 w-36" />
             </tr>
           </thead>
           <tbody>
@@ -177,18 +177,18 @@ export default function AccountsPage() {
                   }`}
                 >
                   <td className="py-3 px-3 text-gray-500">{String(index + 1).padStart(2, "0")}</td>
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-3 truncate">
                     {user.email ? (
                       <span>{user.email}</span>
                     ) : (
                       <span className="text-red-500 font-medium">{formatDeletedLabel(user)}</span>
                     )}
                   </td>
-                  <td className="py-3 px-3 text-gray-500 max-w-[8rem] truncate">{user.address}</td>
+                  <td className="py-3 px-3 text-gray-500 truncate">{user.address}</td>
                   <td className="py-3 px-3 text-gray-500 truncate">{user.addressDetail || "-"}</td>
-                  <td className="py-3 px-3 text-gray-500">{user.postcode}</td>
-                  <td className="py-3 px-3 text-gray-500">{formatDate(user.createDate)}</td>
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-3 text-gray-500 truncate">{user.postcode}</td>
+                  <td className="py-3 px-3 text-gray-500 truncate">{formatDate(user.createDate)}</td>
+                  <td className="py-3 px-3 whitespace-nowrap">
                     {user.email ? (
                       <div className="flex gap-1.5">
                         <button onClick={() => startEdit(user)} className="border border-gray-300 rounded-lg px-3 py-1 text-xs hover:bg-gray-100 transition-colors">수정</button>
