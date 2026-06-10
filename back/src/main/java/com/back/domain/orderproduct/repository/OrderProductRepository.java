@@ -18,25 +18,25 @@ public interface OrderProductRepository extends JpaRepository<OrderProduct, Inte
     // 대시보드
     // 일별 매출 조회
     @Query("""
-        select function('date_format', o.createDate, '%Y-%m-%d') as orderDate
+        select function('date_format', o.deliveryDate, '%Y-%m-%d') as orderDate
               , sum(op.productQuantity * op.productPrice) as totalSalesAmount
             from OrderProduct op
             join op.order o
             where o.status <> com.back.domain.order.entity.OrderStatus.CANCELED
-            group by function('date_format', o.createDate, '%Y-%m-%d')
-            order by function('date_format', o.createDate, '%Y-%m-%d')
+            group by function('date_format', o.deliveryDate, '%Y-%m-%d')
+            order by function('date_format', o.deliveryDate, '%Y-%m-%d')
     """)
     List<DashboardProjection.SalesResponse> findDailySales();
 
     // 월별 매출 조회
     @Query("""
-        select function('date_format', o.createDate, '%Y-%m') as orderDate
+        select function('date_format', o.deliveryDate, '%Y-%m') as orderDate
         	 , sum(op.productQuantity * op.productPrice) as totalSalesAmount
           from OrderProduct op
           join op.order o
          where o.status <> com.back.domain.order.entity.OrderStatus.CANCELED
-         group by function('date_format', o.createDate, '%Y-%m')
-         order by function('date_format', o.createDate, '%Y-%m')
+         group by function('date_format', o.deliveryDate, '%Y-%m')
+         order by function('date_format', o.deliveryDate, '%Y-%m')
     """)
     List<DashboardProjection.SalesResponse> findMonthSales();
 
