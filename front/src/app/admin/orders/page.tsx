@@ -211,8 +211,10 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, [loading]);
 
-  // 그룹핑 (orders 변경 시 자동 재계산)
-  const grouped = groupOrders(orders);
+  // 그룹핑 후 배송예정일 내림차순 정렬
+  const grouped = groupOrders(orders).sort((a, b) =>
+    b.deliveryDate.localeCompare(a.deliveryDate)
+  );
 
   // 검색 필터
   const filtered = searchQuery.trim()

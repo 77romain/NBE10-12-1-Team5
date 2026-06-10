@@ -61,7 +61,8 @@ public class OrderProductService {
 
         List<OrderProduct> orderProducts = orderProductRepository.findByOrderId(orderId);
         int totalPrice = orderProducts.stream()
-                .mapToInt(product -> product.getProductPrice() * product.getProductQuantity())
+                .filter(op -> op.getDeleteDate() == null)
+                .mapToInt(op -> op.getProductPrice() * op.getProductQuantity())
                 .sum();
 
         order.modifyTotalPrice(totalPrice);
