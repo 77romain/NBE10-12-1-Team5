@@ -8,6 +8,17 @@ import type { UserDto } from "@/type/account";
 import type { ProductDto } from "@/type/product";
 import type { RsData } from "@/type/rsData";
 
+function formatUserLabel(user: UserDto | undefined, userId: number): string {
+  if (!user) return `user #${userId}`;
+  if (!user.email) {
+    const date = new Date(user.modifyDate).toLocaleDateString("ko-KR", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    return `탈퇴고객(${date})`;
+  }
+  return user.email;
+}
+
 const STATUS_STYLE: Record<OrderStatus, string> = {
   PENDING: "border border-gray-400 text-gray-600",
   PROCESSING: "border border-yellow-400 text-yellow-600",
@@ -163,7 +174,7 @@ export default function OrdersPage() {
   const filtered = searchQuery.trim()
     ? grouped.filter((g) => {
         const user = userMap.get(g.userId);
-        return user?.email.toLowerCase().includes(searchQuery.toLowerCase());
+        return formatUserLabel(user, g.userId).toLowerCase().includes(searchQuery.toLowerCase());
       })
     : grouped;
 
@@ -187,7 +198,7 @@ export default function OrdersPage() {
       const itemLists = await Promise.all(
         group.orders.map((o) =>
           apiFetch(`/api/order/${o.id}/product`)
-            .then((res: RsData<OrderProductDto[]>) => res.data ?? [])
+            .then((res: RsData<OrderProductDto[]>) => (res.data ?? []).filter((it) => !it.deleteDate))
         )
       );
       setSelectedGroupItems(combineItems(itemLists));
@@ -224,46 +235,37 @@ export default function OrdersPage() {
     catch { alert("배송완료 처리 중 오류가 발생했습니다."); }
   };
 
+  // 취소 = soft delete: DELETE 호출 → 백엔드에서 status=CANCELED + deleteDate 설정
   const handleCancel = async (group: OrderGroup) => {
     const count = group.orders.length;
     if (!confirm(`${count}건의 주문을 취소하시겠습니까?`)) return;
-    try { await applyStatusToGroup(group, "CANCELED"); }
-    catch { alert("취소 중 오류가 발생했습니다."); }
-  };
-
-  // 개별 주문 단건 취소
-  const handleSingleCancel = async (orderId: number) => {
-    if (!confirm(`주문 #${orderId} 단건을 취소할까?`)) return;
-    try {
-      await apiFetch(`/api/order/${orderId}`, {
-        method: "PUT",
-        body: JSON.stringify({ status: "CANCELED" }),
-      });
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: "CANCELED" } : o))
-      );
-      setSelectedGroup(null);
-      setSelectedGroupItems([]);
-    } catch {
-      alert("개별 취소 중 오류가 발생했어!");
-    }
-  };
-
-  const handleDelete = async (group: OrderGroup) => {
-    const count = group.orders.length;
-    if (!confirm(`${count}건의 주문을 삭제하시겠습니까?`)) return;
     try {
       await Promise.all(
         group.orders.map((o) => apiFetch(`/api/order/${o.id}`, { method: "DELETE" }))
       );
       const ids = new Set(group.orders.map((o) => o.id));
-      setOrders((prev) => prev.filter((o) => !ids.has(o.id)));
-      if (selectedGroup?.key === group.key) {
-        setSelectedGroup(null);
-        setSelectedGroupItems([]);
-      }
+      setOrders((prev) =>
+        prev.map((o) => (ids.has(o.id) ? { ...o, status: "CANCELED" as OrderStatus } : o))
+      );
+      setSelectedGroup(null);
+      setSelectedGroupItems([]);
     } catch {
-      alert("삭제 중 오류가 발생했습니다.");
+      alert("취소 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 개별 주문 단건 취소 = soft delete
+  const handleSingleCancel = async (orderId: number) => {
+    if (!confirm(`주문 #${orderId} 단건을 취소할까요?`)) return;
+    try {
+      await apiFetch(`/api/order/${orderId}`, { method: "DELETE" });
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: "CANCELED" as OrderStatus } : o))
+      );
+      setSelectedGroup(null);
+      setSelectedGroupItems([]);
+    } catch {
+      alert("개별 취소 중 오류가 발생했습니다.");
     }
   };
 
@@ -276,11 +278,15 @@ export default function OrdersPage() {
     try {
       const [itemsRes, allRes]: [RsData<OrderProductDto[]>, ProductDto[]] = await Promise.all([
         apiFetch(`/api/order/${order.id}/product`),
-        apiFetch("/api/Product"),
+        apiFetch("/api/product"),
       ]);
-      setEditProducts((itemsRes.data ?? []).map((d) => ({
-        productId: d.productId, productName: d.productName, productQuantity: d.productQuantity,
-      })));
+      const deduped = (itemsRes.data ?? []).filter((d) => !d.deleteDate).reduce<EditProduct[]>((acc, d) => {
+        const found = acc.find((it) => it.productId === d.productId);
+        if (found) { found.productQuantity += d.productQuantity; }
+        else { acc.push({ productId: d.productId, productName: d.productName, productQuantity: d.productQuantity }); }
+        return acc;
+      }, []);
+      setEditProducts(deduped);
       setAllProducts(allRes);
     } catch {
       alert("주문 품목 조회 중 오류가 발생했습니다.");
@@ -328,7 +334,7 @@ export default function OrdersPage() {
         const itemLists = await Promise.all(
           selectedGroup.orders.map((o) =>
             apiFetch(`/api/order/${o.id}/product`)
-              .then((res: RsData<OrderProductDto[]>) => res.data ?? [])
+              .then((res: RsData<OrderProductDto[]>) => (res.data ?? []).filter((it) => !it.deleteDate))
           )
         );
         setSelectedGroupItems(combineItems(itemLists));
@@ -402,7 +408,9 @@ export default function OrdersPage() {
                         <span className="ml-1 text-xs text-blue-400">×{group.orders.length}</span>
                       )}
                     </td>
-                    <td className="py-3 px-3">{user?.email ?? `user #${group.userId}`}</td>
+                    <td className={`py-3 px-3 ${!user?.email ? "text-red-500 font-medium" : ""}`}>
+                      {formatUserLabel(user, group.userId)}
+                    </td>
                     <td className="py-3 px-3 text-gray-500 max-w-[7rem] truncate">{group.address}</td>
                     <td className="py-3 px-3">
                       <span className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-gray-600"}`}>
@@ -441,14 +449,6 @@ export default function OrdersPage() {
                             className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
                           >
                             취소
-                          </button>
-                        )}
-                        {group.status === "CANCELED" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(group); }}
-                            className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            삭제
                           </button>
                         )}
                         {group.status === "SHIPPED" && (
@@ -517,7 +517,7 @@ export default function OrdersPage() {
                     </span>
                   </div>
                   {[
-                    ["이메일", user?.email ?? "-"],
+                    ["이메일", formatUserLabel(user, selectedGroup.userId)],
                     ["주소", selectedGroup.address],
                     ["우편번호", selectedGroup.orders[0]?.postcode ?? "-"],
                     ["배송예정일", selectedGroup.deliveryDate],
@@ -525,7 +525,9 @@ export default function OrdersPage() {
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between gap-2">
                       <span className="text-gray-500 flex-shrink-0">{label}</span>
-                      <span className="text-right break-all">{value}</span>
+                      <span className={`text-right break-all ${label === "이메일" && !user?.email ? "text-red-500 font-medium" : ""}`}>
+                        {value}
+                      </span>
                     </div>
                   ))}
                   <div className="flex justify-between gap-2 items-center pt-1">

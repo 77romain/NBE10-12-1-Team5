@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/backend/client";
@@ -9,6 +8,7 @@ import type { RsData } from "@/type/rsData";
 
 type FormState = {
   name: string;
+  imageUrl: string;
   price: string;
   inventory: string;
   description: string;
@@ -23,6 +23,7 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
   const [form, setForm] = useState<FormState>({
     name: "",
+    imageUrl: "",
     price: "",
     inventory: "",
     description: "",
@@ -31,7 +32,7 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const data: ProductDto[] = await apiFetch("/api/Product");
+      const data: ProductDto[] = await apiFetch("/api/product");
       setProducts(data);
     } catch (err) {
       console.error(err);
@@ -44,11 +45,12 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
+  const active = products.filter((i) => !i.deleteDate);
   const filtered = searchQuery.trim()
-    ? products.filter((i) =>
+    ? active.filter((i) =>
         i.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : products;
+    : active;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -62,6 +64,7 @@ export default function ProductsPage() {
     setSelectedProduct(product);
     setForm({
       name: product.name,
+      imageUrl: product.imageUrl ?? "",
       price: String(product.price),
       inventory: String(product.inventory),
       description: product.description ?? "",
@@ -87,10 +90,11 @@ export default function ProductsPage() {
   const handleUpdate = async () => {
     if (!selectedProduct || !validateForm()) return;
     try {
-      const res: RsData<void> = await apiFetch(`/api/Product/${selectedProduct.id}`, {
+      const res: RsData<void> = await apiFetch(`/api/product/${selectedProduct.id}`, {
         method: "PUT",
         body: JSON.stringify({
           name: form.name,
+          imageUrl: form.imageUrl || "/coffee_bean.jpg",
           price: Number(form.price),
           inventory: Number(form.inventory),
           description: form.description,
@@ -102,6 +106,7 @@ export default function ProductsPage() {
             ? {
                 ...i,
                 name: form.name,
+                imageUrl: form.imageUrl || "/coffee_bean.jpg",
                 price: Number(form.price),
                 inventory: Number(form.inventory),
                 description: form.description,
@@ -110,7 +115,7 @@ export default function ProductsPage() {
         )
       );
       setSelectedProduct((prev) =>
-        prev ? { ...prev, name: form.name, price: Number(form.price), inventory: Number(form.inventory), description: form.description } : prev
+        prev ? { ...prev, name: form.name, imageUrl: form.imageUrl || "/coffee_bean.jpg", price: Number(form.price), inventory: Number(form.inventory), description: form.description } : prev
       );
       alert(res.msg);
     } catch (err) {
@@ -124,12 +129,12 @@ export default function ProductsPage() {
     if (!confirm(`"${selectedProduct.name}"을(를) 삭제하시겠습니까?`)) return;
     try {
       const res: RsData<void> = await apiFetch(
-        `/api/Product/${selectedProduct.id}`,
+        `/api/product/${selectedProduct.id}`,
         { method: "DELETE" }
       );
       setProducts((prev) => prev.filter((i) => i.id !== selectedProduct.id));
       setSelectedProduct(null);
-      setForm({ name: "", price: "", inventory: "", description: "" });
+      setForm({ name: "", imageUrl: "", price: "", inventory: "", description: "" });
       alert(res.msg);
     } catch (err) {
       console.error(err);
@@ -207,7 +212,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-2 px-2">
                     <div className="w-8 h-8 rounded-lg overflow-hidden">
-                      <Image src="/coffee_bean.jpg" alt={product.name} width={32} height={32} className="w-full h-full object-cover" />
+                      <img src={product.imageUrl || "/coffee_bean.jpg"} alt={product.name} className="w-full h-full object-cover" />
                     </div>
                   </td>
                   <td className="py-3 px-2 font-medium">{product.name}</td>
@@ -280,7 +285,7 @@ export default function ProductsPage() {
           <>
             {/* Image */}
             <div className="w-full aspect-square rounded-xl overflow-hidden mb-4">
-              <Image src="/coffee_bean.jpg" alt={selectedProduct?.name ?? "상품"} width={200} height={200} className="w-full h-full object-cover" />
+              <img src={selectedProduct.imageUrl || "/coffee_bean.jpg"} alt={selectedProduct.name} className="w-full h-full object-cover" />
             </div>
 
             {/* Fields */}
@@ -291,6 +296,16 @@ export default function ProductsPage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-gray-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">이미지 URL</label>
+                <input
+                  type="text"
+                  value={form.imageUrl}
+                  onChange={(e) => updateForm("imageUrl", e.target.value)}
+                  placeholder="https://..."
                   className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-gray-400"
                 />
               </div>

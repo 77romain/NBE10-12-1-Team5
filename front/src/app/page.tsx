@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/backend/client";
 import { getCart } from "@/lib/cart";
 import type { ProductDto } from "@/type/product";
@@ -87,11 +86,43 @@ export default function MainPage() {
   const [addQty, setAddQty] = useState(1);
   const [editSaving, setEditSaving] = useState(false);
 
+  // SSE: 현재 조회된 주문 목록을 ref로 추적 (이벤트 핸들러에서 최신 state 참조)
+  const myOrdersRef = useRef<OrderDto[] | null>(null);
+  useEffect(() => { myOrdersRef.current = myOrders; }, [myOrders]);
+
   useEffect(() => {
-    apiFetch("/api/Product")
+    apiFetch("/api/product")
       .then((data: ProductDto[]) => { setProducts(data); setAllProducts(data); })
       .finally(() => setLoading(false));
     setCartCount(getCart().reduce((sum, c) => sum + c.quantity, 0));
+  }, []);
+
+  // SSE 연결: 어드민이 주문 상태를 변경하면 메인 페이지 주문 목록도 실시간 갱신
+  useEffect(() => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+    const eventSource = new EventSource(`${apiBaseUrl}/api/notifications/subscribe`);
+
+    eventSource.addEventListener("newOrder", async (event) => {
+      const currentOrders = myOrdersRef.current;
+      if (!currentOrders || currentOrders.length === 0) return;
+      try {
+        const data = JSON.parse(event.data) as { orderId: number; totalPrice: number };
+        const isUserOrder = currentOrders.some((o) => o.id === data.orderId);
+        if (!isUserOrder) return;
+        const updated: OrderDto = await apiFetch(`/api/order/${data.orderId}`);
+        setMyOrders((prev) =>
+          prev ? prev.map((o) => (o.id === data.orderId ? updated : o)) : null
+        );
+      } catch (err) {
+        console.error("SSE 주문 갱신 오류:", err);
+      }
+    });
+
+    eventSource.onerror = () => {
+      console.warn("메인 페이지 SSE 연결 끊김, 자동 재연결 시도 중...");
+    };
+
+    return () => eventSource.close();
   }, []);
 
   const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
@@ -144,7 +175,7 @@ export default function MainPage() {
     setDetailLoading(true);
     try {
       const res: RsData<OrderProductDto[]> = await apiFetch(`/api/order/${order.id}/product`);
-      setOrderProducts(res.data ?? []);
+      setOrderProducts((res.data ?? []).filter((it) => !it.deleteDate));
     } catch {
       setOrderProducts([]);
     } finally {
@@ -217,7 +248,7 @@ export default function MainPage() {
         body: JSON.stringify(editProducts.map((it) => ({ productId: it.productId, productQuantity: it.productQuantity }))),
       });
       const res: RsData<OrderProductDto[]> = await apiFetch(`/api/order/${selectedOrder.id}/product`);
-      const updatedProducts = res.data ?? [];
+      const updatedProducts = (res.data ?? []).filter((it) => !it.deleteDate);
       setOrderProducts(updatedProducts);
 
       // 로컬 상태를 즉시 동기화하기 위해 새 총 가격 계산
@@ -490,7 +521,7 @@ export default function MainPage() {
                 className="bg-white border border-gray-300 rounded-2xl aspect-square flex flex-col items-center justify-center p-4 hover:shadow-xl hover:border-transparent transition-all duration-200 group"
               >
                 <div className="w-50 h-50 rounded-xl mb-3 overflow-hidden">
-                  <Image src="https://i.imgur.com/HKOFQYa.jpeg" alt={item.name} width={56} height={56} className="w-full h-full object-cover" />
+                  <img src={item.imageUrl || "/coffee_bean.jpg"} alt={item.name} className="w-full h-full object-cover" />
                 </div>
                 <p className="font-semibold text-sm text-center text-gray-800 leading-tight">{item.name}</p>
                 <p className="text-xl font-bold mt-1">{item.price.toLocaleString()}원</p>

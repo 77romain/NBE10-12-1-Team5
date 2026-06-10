@@ -40,7 +40,7 @@ export default function AccountsPage() {
 
   const filtered = searchQuery.trim()
     ? users.filter((u) =>
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (u.email ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.address.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : users;
@@ -49,17 +49,25 @@ export default function AccountsPage() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     try {
       await apiFetch(`/api/user/${id}`, { method: "DELETE" });
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      const updated: UserDto = await apiFetch(`/api/user/${id}`);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
     } catch (err) {
       console.error(err);
       alert("삭제 중 오류가 발생했습니다.");
     }
   };
 
+  const formatDeletedLabel = (user: UserDto) => {
+    const date = new Date(user.modifyDate).toLocaleDateString("ko-KR", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    return `탈퇴고객(${date})`;
+  };
+
   const startEdit = (user: UserDto) => {
     setEditingId(user.id);
     setEditForm({
-      email: user.email,
+      email: user.email ?? "",
       address: user.address,
       addressDetail: user.addressDetail,
       postcode: user.postcode,
@@ -162,18 +170,33 @@ export default function AccountsPage() {
                   </td>
                 </tr>
               ) : (
-                <tr key={user.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                <tr
+                  key={user.id}
+                  className={`border-b border-gray-100 last:border-0 transition-colors ${
+                    !user.email ? "bg-red-50 hover:bg-red-100" : "hover:bg-gray-50"
+                  }`}
+                >
                   <td className="py-3 px-3 text-gray-500">{String(index + 1).padStart(2, "0")}</td>
-                  <td className="py-3 px-3">{user.email}</td>
+                  <td className="py-3 px-3">
+                    {user.email ? (
+                      <span>{user.email}</span>
+                    ) : (
+                      <span className="text-red-500 font-medium">{formatDeletedLabel(user)}</span>
+                    )}
+                  </td>
                   <td className="py-3 px-3 text-gray-500 max-w-[8rem] truncate">{user.address}</td>
                   <td className="py-3 px-3 text-gray-500 truncate">{user.addressDetail || "-"}</td>
                   <td className="py-3 px-3 text-gray-500">{user.postcode}</td>
                   <td className="py-3 px-3 text-gray-500">{formatDate(user.createDate)}</td>
                   <td className="py-3 px-3">
-                    <div className="flex gap-1.5">
-                      <button onClick={() => startEdit(user)} className="border border-gray-300 rounded-lg px-3 py-1 text-xs hover:bg-gray-100 transition-colors">수정</button>
-                      <button onClick={() => handleDelete(user.id)} className="border border-gray-200 rounded-lg px-3 py-1 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">삭제</button>
-                    </div>
+                    {user.email ? (
+                      <div className="flex gap-1.5">
+                        <button onClick={() => startEdit(user)} className="border border-gray-300 rounded-lg px-3 py-1 text-xs hover:bg-gray-100 transition-colors">수정</button>
+                        <button onClick={() => handleDelete(user.id)} className="border border-gray-200 rounded-lg px-3 py-1 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">삭제</button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-red-300">탈퇴</span>
+                    )}
                   </td>
                 </tr>
               )

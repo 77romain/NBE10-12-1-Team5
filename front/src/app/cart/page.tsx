@@ -55,6 +55,10 @@ export default function CartPage() {
       alert("이메일, 주소, 우편번호를 모두 입력해주세요.");
       return;
     }
+    if (!/^\d{5}$/.test(postcode.trim())) {
+      alert("우편번호를 제대로 입력해주세요.");
+      return;
+    }
 
     // 개인정보를 sessionStorage에 저장 후 주문 확인 페이지로 이동
     sessionStorage.setItem(
