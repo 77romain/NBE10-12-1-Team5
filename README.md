@@ -24,6 +24,12 @@ Spring Boot 기반의 REST API 서버와 HTML 프론트엔드로 구성.
 
 ---
 
+## 🎥 시연 영상
+
+[![BE12 Project #1 카페 메뉴 관리 서비스 - !FiveGuys](https://img.youtube.com/vi/1s7iyjXlGFQ/0.jpg)](https://www.youtube.com/watch?v=1s7iyjXlGFQ)
+
+---
+
 ## 🛠️ 기술 스택
 
 ### Frontend
